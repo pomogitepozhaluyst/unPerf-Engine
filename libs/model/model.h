@@ -1,11 +1,16 @@
 #pragma once
 
 
+
+
 class Model: public Object {
 
 public:
-    Model(const char* path, const char* texture1)
+    string pathModel;
+    
+    Model(const char* path, const char* texture1 = "")
     {
+        pathModel = path;
         texture = texture1;
 
         loadModel(path);
@@ -47,12 +52,19 @@ private:
             processNode(node->mChildren[i], scene);
         }
     }
-
+    string loadTexture(aiMaterial* mat, aiTextureType type, string typeName) {
+        aiString  texture;
+        for (unsigned int i = 0; i < mat->GetTextureCount(type); i++)
+        {
+            mat->GetTexture(type, i, &texture);
+        }
+        return texture.C_Str();
+    }
     Mesh processMesh(aiMesh* mesh, const aiScene* scene)
     {
         vector<Vertex> verts;
         vector<unsigned> indices;
-        cout << texture.c_str() << endl;
+        //cout << texture.c_str() << endl;
 
 
 
@@ -68,11 +80,11 @@ private:
             ver.x = mesh->mVertices[i].x;
             ver.y = mesh->mVertices[i].y;
             ver.z = mesh->mVertices[i].z;
-
-            verNorm.x = mesh->mNormals[i].x;
-            verNorm.y = mesh->mNormals[i].y;
-            verNorm.z = mesh->mNormals[i].z;
-
+            if (mesh->mNormals) {
+                verNorm.x = mesh->mNormals[i].x;
+                verNorm.y = mesh->mNormals[i].y;
+                verNorm.z = mesh->mNormals[i].z;
+            }
 
             if (mesh->mTextureCoords[0]) // does the mesh contain texture coordinates?
             {
@@ -80,7 +92,7 @@ private:
                 verTex.y = mesh->mTextureCoords[0][i].y;
             }
             else
-                verTex=Vec2(0.0f, 0.0f);
+                verTex = Vec2(0.0f, 0.0f);
 
             verts.push_back(Vertex(ver, verTex, verNorm));
 
@@ -93,7 +105,23 @@ private:
                 indices.push_back(face.mIndices[j]);
         }
 
-        cout << indices.size() << " == " << verts.size();
+
+        if (texture == ""){
+            if (mesh->mMaterialIndex >= 0)
+            {
+                string directory = pathModel;
+                while(directory[directory.size()-1] != '\\') {
+                    directory.pop_back();
+                }
+                aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
+                cout << directory+loadTexture(material,
+                    aiTextureType_DIFFUSE, "texture_diffuse") << endl;
+
+                return Mesh(verts, indices, directory+loadTexture(material,
+                    aiTextureType_DIFFUSE, "texture_diffuse"), "");
+            }
+        }
+
         return Mesh(verts, indices, texture, "");
     }
 

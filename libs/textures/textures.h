@@ -8,12 +8,13 @@ public:
 	GLuint unit;
 	Texture() = default;
 
-	Texture(const char* image, char t,  GLenum texType, GLuint slot, GLuint  format, GLenum pixelType) {
+	Texture(const char* image, char t,  GLenum texType, GLuint slot, GLuint  format, GLenum pixelType, bool *status) {
 		type = texType;
 		typeTex = t;
 		glGenTextures(1, &id);
 
 		int w, h, c;
+		//stbi_set_flip_vertically_on_load(true);
 		unsigned char* texData = stbi_load(image, &w, &h, &c, 0);
 		glActiveTexture(GL_TEXTURE0 + slot);
 		unit = slot;
@@ -26,20 +27,87 @@ public:
 		glTexParameteri(texType, GL_TEXTURE_WRAP_T, GL_REPEAT);
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 		if (texData) {
-			glTexImage2D(texType, 0, GL_RGBA, w, h, 0, format, pixelType, texData);
+
+			GLenum format1 = GL_RGB;
+			switch (c)
+			{
+			case 1:
+				format1 = GL_LUMINANCE;
+				break;
+			case 2:
+				format1 = GL_LUMINANCE_ALPHA;
+				break;
+			case 3:
+				format1 = GL_RGB;
+				break;
+			case 4:
+				format1 = GL_RGBA;
+				break;
+			}
+	
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, format1, GL_UNSIGNED_BYTE, texData);
+
+
 			glGenerateMipmap(texType);
+			*status = true;
 		}
 		else {
 			std::cout << "ERR" << std::endl;
+			*status = false;
 		}
+
 
 		stbi_image_free(texData);
 		glBindTexture(texType, 0);
 	}
 
-	void texUnit(Shader& shader, const char* uniform, GLuint unit) {
+
+	Texture(string image)
+	{
+		vector<std::string> faces=
+		{
+			image+"/right.jpg",
+				image + "/left.jpg",
+				image + "/top.jpg",
+				image + "/bottom.jpg",
+				image + "/front.jpg",
+				image + "/back.jpg"
+		};
+
+		glGenTextures(1, &id);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, id);
+
+
+		int w, h, c;
+
+		for (unsigned int i = 0; i < faces.size(); i++)
+		{
+			unsigned char* data = stbi_load(faces[i].c_str(), &w, &h, &c, 0);
+			if (data)
+			{
+				glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
+					0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, data
+				);
+				stbi_image_free(data);
+			}
+			else
+			{
+				std::cout << "Cubemap tex failed to load at path: " << faces[i] << std::endl;
+				stbi_image_free(data);
+			}
+		}
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+	}
+
+
+	void texUnit(Shader& shader, const char* uniform, GLuint unit1) {
 		shader.Activate();
-		glUniform1i(glGetUniformLocation(shader.id, uniform), unit);
+		glUniform1i(glGetUniformLocation(shader.id, uniform), unit1);
 	}
 
 	void bind() {

@@ -2,9 +2,10 @@
 class Vertex {
 public:
 	Vec3 pos;
-	
-	Vec3 norm;
 	Vec2 tex;
+	Vec3 norm;
+	Vec3 tan;
+	Vec3 bitan;
 
 	Vertex() = default;
 

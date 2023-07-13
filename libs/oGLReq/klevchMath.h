@@ -209,6 +209,12 @@ public:
   Quaternion(float a1, Vec3 v1) {
     a = a1;
     v = v1;
+  }  
+  Quaternion(Vec3 v1, float a1) {
+    a = v1.x;
+    v.x = v1.y;
+    v.y = v1.z;
+    v.z = a1;
   }
 
   Quaternion operator+(Quaternion other) {
@@ -496,6 +502,14 @@ public:
       for (int j = 0; j < 3; j++)
         matrix[i][j] = a;
   }
+
+  //Mat3(Mat4 m) {
+  //    for (int i = 0; i < 3; i++) {
+  //        for (int j = 0; j < 3; j++) {
+  //            matrix[i][j] = m.matrix[i][j];
+  //        }
+  //    }
+  //}
 
   Mat3 operator+(Mat3 other) {
     Mat3 result = Mat3();
@@ -1232,10 +1246,36 @@ Mat4 LookAt(Vec3 from, Vec3 to, Vec3 worldUp) {
     return result;
 }
 
+Mat3 LookAt3x3(Vec3 from, Vec3 to, Vec3 worldUp) {
+    Vec3 forward = from - to;
+    Vec3 right = CrossProduct(worldUp, forward);
+    Vec3 up = CrossProduct(forward, right);
+
+    Mat3 result;
+    result.matrix[0][0] = right.x;
+    result.matrix[1][0] = right.y;
+    result.matrix[2][0] = right.z;
+    result.matrix[3][0] = -DotProduct(right, from);
+
+
+    result.matrix[0][1] = up.x;
+    result.matrix[1][1] = up.y;
+    result.matrix[2][1] = up.z;
+    result.matrix[3][1] = -DotProduct(up, from);
+
+
+    result.matrix[0][2] = forward.x;
+    result.matrix[1][2] = forward.y;
+    result.matrix[2][2] = forward.z;
+    result.matrix[3][2] = -DotProduct(forward, from);
+
+    return result;
+}
+
 float angle(Vec3 v1, Vec3 v2) {
    // glm::angle(glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(1.0f, 2.0f, 1.0f));
     
-    return acos(DotProduct(v1, v2) / (v1.Length()*v2.Length()));
+    return 180.0f*acos(DotProduct(v1, v2) / (v1.Length()*v2.Length()))/pi;
 }
 
 Mat4 matTranslate(Vec3 t) {

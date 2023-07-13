@@ -90,44 +90,40 @@ int main() {
 
 
 	glShadeModel(GL_SMOOTH);
-	//glLight(GL_DIFFUSE);
-	ObjectManager manager = ObjectManager(vector<Camera>(1, camera));
+	ObjectManager manager = ObjectManager(vector<Camera>(1, camera), window.getSize());
 	manager.light.insert(pair<int, Light*>(123, &camera.light));
-	//manager.loadLight();
-	//manager.shaders["default"].Activate();
+
 
 	while (isGo) {
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f); //отчистка экрана
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		sf::Event windowEvent;
+		while (window.pollEvent(windowEvent)) { // обработка ивентов
 
+			ImGui::SFML::ProcessEvent(windowEvent);
+			manager.camers[manager.mainCamera].move(&window, windowEvent, &cursor);
+		}
 
-		auto dtclock = clock.restart();
-		float delta = dtclock.asMilliseconds();
-
-		//update imgui
 		img.update(window, &clock);
 		if (cursor) {
 			ImGui::SetMouseCursor(ImGuiMouseCursor_None);
 
 		}
-			glEnable(GL_DEPTH_TEST);
-			//glShadeModel(GL_SMOOTH);
 
-			//begin imgui 
-			img.basicWindow(&manager, &camera, &window, &clock);
-			//end imgui
+		glEnable(GL_DEPTH_TEST);
+		glEnable(GL_BLEND);
+
+		//glBlendEquation(GL_MAX);
+		glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE);
+		//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		//glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ZERO);
+		//glBlendFuncSeparate(GL_ONE);
+		img.basicWindow(&manager,&window, &clock);
+
+		manager.update();
 
 
-
-		manager.update(camera);
-
-		while (window.pollEvent(windowEvent)) { // обработка ивентов
-
-			ImGui::SFML::ProcessEvent(windowEvent);
-			camera.move(&window, windowEvent, &cursor);
-		}
 
 
 		
@@ -140,7 +136,6 @@ int main() {
 	}
 	
 	manager.Delete();
-	//shaderProgram.Delete();
 	window.close();
 	img.shotDown();
 	//shoutdown
