@@ -1,4 +1,4 @@
-#pragma onc
+#pragma once
 
 
 class Material {
@@ -29,11 +29,10 @@ class Mesh {
 public:
 	vector<Vertex> vert;
 	vector<unsigned> indes;
-	vector<Texture> tex;
 	Texture* difMap = nullptr;
 	Texture* normMap = nullptr;
 	Texture* parallaxMap = nullptr;
-	float heightScale = 1.0f;
+	float heightScale = 0.15f;
 
 	bool isDTex = false;
 	bool isNTex = false;
@@ -44,10 +43,9 @@ public:
 	bool isStatusLoadPTex = false;
 
 
-	Vec3 localPos = Vec3(0.0f, 0.0f, 0.0f);
-	Vec3 localRot = Vec3(1.0f, 1.0f, 1.0f);
-	Vec3 localScale = Vec3(1.0f, 1.0f, 1.0f);
-	Vec4 localColor = Vec4(0.0f, 0.0f, 0.0f, 0.0f);
+	Vec2 textureOffset = Vec2(1.0f, 1.0f);
+
+	Transform localTransform;
 
 	Material material;
 
@@ -61,16 +59,14 @@ public:
 	Mesh(vector<Vertex>& vertex, vector<unsigned>& indices) {
 		vert = vertex;
 		indes = indices;
-		//tex = textures;
 
 
 		calcTB();
 
-		//parMap = parTex;
 		vao.bind();
 
-		VBO vbo = VBO(vertex);
-		EBO ebo = EBO(indices);
+		VBO vbo = VBO(vert);
+		EBO ebo = EBO(indes);
 
 
 		vao.linkVBO(vbo, 0, 3, sizeof(Vertex), (void*)0);
@@ -86,9 +82,16 @@ public:
 	}
 
 
+	void updateSkyBox(string difTex) {
+		if (difTex != "") {
+			difMap = new Texture(difTex.c_str(), &isStatusLoadDTex);
+			isDTex = isStatusLoadDTex;
+			//cout << isDTex << endl;
 
+		}
+	}
 
-	Mesh(vector<Vertex>& vertex, vector<unsigned>& indices, string difTex, string normTex/*vector<Texture>& textures*/) {
+	Mesh(vector<Vertex> vertex, vector<unsigned> indices, string difTex, string normTex) {
 		vert = vertex;
 		indes = indices;
 		//tex = textures;
@@ -97,7 +100,7 @@ public:
 			difMap = new Texture(difTex.c_str(), 'd', GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, &isDTex);
 		}
 		if (normTex != "") {
-			cout << "hehe";
+			//cout << "hehe";
 			normMap = new Texture(normTex.c_str(), 'n', GL_TEXTURE_2D, 1, GL_RGB, GL_UNSIGNED_BYTE, &isNTex);
 		}
 		calcTB();
@@ -182,7 +185,7 @@ public:
 	}
 
 
-	void draw(Shader& shader, Camera& camera, Vec3 translate, Mat3 rotation, Vec3 scale, Vec4 color) {
+	void draw(Shader& shader, Camera& camera, Transform parentTransform) {
 		//shader.Activate();
 		vao.bind();
 
@@ -212,54 +215,80 @@ public:
 		}
 		else {
 			glUniform1i(glGetUniformLocation(shader.id, "isParallaxMap"), false);
-	}
+		}
+		localTransform.updateMarixRotation();
+
+		glUniform2fv(glGetUniformLocation(shader.id, "textureOffset"), 1, reinterpret_cast<float*>(&textureOffset));
 
 
+		Transform resultTransform = parentTransform.getTransformMesh(localTransform);
 		glUniform3fv(glGetUniformLocation(shader.id, "material.ambient"), 1, reinterpret_cast<float*>(&material.ambient));
 		glUniform3fv(glGetUniformLocation(shader.id, "material.specular"), 1, reinterpret_cast<float*>(&material.specular));
 		glUniform3fv(glGetUniformLocation(shader.id, "material.diffuse"), 1, reinterpret_cast<float*>(&material.diffuse));
 		glUniform1f(glGetUniformLocation(shader.id, "material.shininess"), material.shinines);
 		glUniform1f(glGetUniformLocation(shader.id, "heightScale"), heightScale);
 
+		if (camers[mainCamera]->parentTransorm) {
+			Vec3 camPos = camera.parentTransorm->getTransformMesh(camera.transform).pos;
+			glUniform3fv(glGetUniformLocation(shader.id, "camPos"),1, reinterpret_cast<float*>(&camPos));
 
+		}
+		else {
+			glUniform3f(glGetUniformLocation(shader.id, "camPos"), camera.transform.pos.x, camera.transform.pos.y, camera.transform.pos.z);
 
-		glUniformMatrix3fv(glGetUniformLocation(shader.id, "rotationMat"), 1, GL_FALSE, &rotation.matrix[0][0]);
-		glUniformMatrix3fv(glGetUniformLocation(shader.id, "matV"), 1, GL_FALSE, &LookAt3x3(camera.pos, camera.pos + camera.direction, camera.up).matrix[0][0]);
+		}
+
+		//glUniformMatrix3fv(glGetUniformLocation(shader.id, "rotationMat"), 1, GL_FALSE, &resultTransform.matRotation.matrix[0][0]);
+		//glUniformMatrix3fv(glGetUniformLocation(shader.id, "matV"), 1, GL_FALSE, &LookAt3x3(camera.transform.pos, camera.transform.pos + camera.direction, camera.up).matrix[0][0]);
 
 		glUniformMatrix4fv(glGetUniformLocation(shader.id, "matPV"), 1, GL_FALSE, &(camera.matPV).matrix[0][0]);
-		Vec3 transTmp = translate + localPos;
-		glUniform3fv(glGetUniformLocation(shader.id, "translate"), 1,  reinterpret_cast<float*>(&transTmp));
-		glUniformMatrix3fv(glGetUniformLocation(shader.id, "rotation"), 1, GL_FALSE, &rotation.matrix[0][0]);
-		Vec3 scaleTmp = scale + localScale;
-		glUniform3fv(glGetUniformLocation(shader.id, "scale"), 1, reinterpret_cast<float*>(&scaleTmp));
-		glUniform4f(glGetUniformLocation(shader.id, "color"), color.a+localColor.a, color.v.x + localColor.v.x, color.v.y + localColor.v.y, color.v.z + localColor.v.z);
-		glUniform3f(glGetUniformLocation(shader.id, "camPos"), camera.pos.x, camera.pos.y, camera.pos.z);
-		glUniform3f(glGetUniformLocation(shader.id, "camPos"), camera.pos.x, camera.pos.y, camera.pos.z);
+
+
+		glUniform3fv(glGetUniformLocation(shader.id, "translate"), 1,  reinterpret_cast<float*>(&resultTransform.pos));
+		glUniformMatrix3fv(glGetUniformLocation(shader.id, "rotation"), 1, GL_FALSE, &resultTransform.matRotation.matrix[0][0]);
+		glUniform3fv(glGetUniformLocation(shader.id, "scale"), 1, reinterpret_cast<float*>(&resultTransform.scale));
+		glUniform4f(glGetUniformLocation(shader.id, "color"), resultTransform.color.a, resultTransform.color.v.x, resultTransform.color.v.y, resultTransform.color.v.z);
+		//glUniform3f(glGetUniformLocation(shader.id, "camPos"), camera.transform.pos.x, camera.transform.pos.y, camera.transform.pos.z);
 		
 
 		glDrawElements(GL_TRIANGLES, (indes.size()), GL_UNSIGNED_INT, 0);
 		vao.unBind();
 	}
 
-	void drawCubeLight(Shader& shader, Camera& camera, Vec3 translate, Vec3 scale, Vec4 color) {
+	void drawCubeLight(Shader& shader, Mat4 matPV, Transform parentTransform) {
 		vao.bind();
-		glUniformMatrix4fv(glGetUniformLocation(shader.id, "matPV"), 1, GL_FALSE, &(camera.matPV).matrix[0][0]);
+		glUniformMatrix4fv(glGetUniformLocation(shader.id, "matPV"), 1, GL_FALSE, &(matPV).matrix[0][0]);
 
-		glUniform4f(glGetUniformLocation(shader.id, "color"), color.a, color.v.x, color.v.y, color.v.z);
-		glUniform3fv(glGetUniformLocation(shader.id, "translate"), 1, reinterpret_cast<float*>(&translate));
-		glUniform3fv(glGetUniformLocation(shader.id, "scale"), 1, reinterpret_cast<float*>(&scale));
+		glUniform4f(glGetUniformLocation(shader.id, "color"), parentTransform.color.a, parentTransform.color.v.x, parentTransform.color.v.y, parentTransform.color.v.z);
+		glUniform3fv(glGetUniformLocation(shader.id, "translate"), 1, reinterpret_cast<float*>(&parentTransform.pos));
+		glUniform3fv(glGetUniformLocation(shader.id, "scale"), 1, reinterpret_cast<float*>(&parentTransform.scale));
 		glDrawElements(GL_TRIANGLES, (indes.size()), GL_UNSIGNED_INT, 0);
 		vao.unBind();
 
 	}
 
-	void drawSkyBox(Shader& shader, Camera& camera) {
+	void drawSkyBox(Shader& shader, Camera* camera) {
 		vao.bind();
 		difMap->texUnit(shader, "skybox", 0);
 		difMap->bind();
-		glUniformMatrix4fv(glGetUniformLocation(shader.id, "matPV"), 1, GL_FALSE, &(camera.matPV).matrix[0][0]);
-		glUniform3fv(glGetUniformLocation(shader.id, "translate"), 1, reinterpret_cast<float*>(&camera.pos));
-		Vec3 far = Vec3(camera.farPlane, camera.farPlane, camera.farPlane);
+		camera->look();
+		glUniformMatrix4fv(glGetUniformLocation(shader.id, "matPV"), 1, GL_FALSE, &(camera->matPV).matrix[0][0]);
+		Vec3 cameraResultPos;
+		Vec3 far;
+
+		if (camera->parentTransorm) {
+			if (!camera->parentTransorm->localRotation)
+				cameraResultPos = camera->parentTransorm->matRotation * camera->transform.pos + camera->parentTransorm->pos;
+			else
+				cameraResultPos = camera->transform.pos + camera->parentTransorm->pos;
+
+		}
+		else{
+			cameraResultPos = camera->transform.pos;
+		}
+		far = Vec3(camera->farPlane, camera->farPlane, camera->farPlane);
+
+		glUniform3fv(glGetUniformLocation(shader.id, "translate"), 1, reinterpret_cast<float*>(&cameraResultPos));
 		glUniform3fv(glGetUniformLocation(shader.id, "scale"), 1, reinterpret_cast<float*>(&far));
 		glDrawElements(GL_TRIANGLES, (indes.size()), GL_UNSIGNED_INT, 0);
 		vao.unBind();

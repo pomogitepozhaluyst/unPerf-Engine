@@ -52,7 +52,6 @@ public:
 			*status = true;
 		}
 		else {
-			std::cout << "ERR" << std::endl;
 			*status = false;
 		}
 
@@ -62,7 +61,7 @@ public:
 	}
 
 
-	Texture(string image)
+	Texture(string image, bool* isStatusLoadDTex)
 	{
 		vector<std::string> faces=
 		{
@@ -89,11 +88,13 @@ public:
 					0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, data
 				);
 				stbi_image_free(data);
+				*isStatusLoadDTex = true;
 			}
 			else
 			{
 				std::cout << "Cubemap tex failed to load at path: " << faces[i] << std::endl;
 				stbi_image_free(data);
+				*isStatusLoadDTex = false;
 			}
 		}
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);

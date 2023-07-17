@@ -3,22 +3,20 @@
 
 
 
-class Model: public Object {
+class Model {
 
 public:
     string pathModel;
-    
-    Model(const char* path, const char* texture1 = "")
+    vector<Mesh> mesh;
+    Model(const char* path, string texture1 = "")
     {
         pathModel = path;
-        texture = texture1;
 
         loadModel(path);
         //cout << texture << endl;
 
        // objMat = Mat4().E();
     }
-    string texture;
 private:
     // model data
     string directory;
@@ -106,23 +104,23 @@ private:
         }
 
 
-        if (texture == ""){
-            if (mesh->mMaterialIndex >= 0)
-            {
-                string directory = pathModel;
-                while(directory[directory.size()-1] != '\\') {
-                    directory.pop_back();
-                }
-                aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
-                cout << directory+loadTexture(material,
+        if (mesh->mMaterialIndex >= 0)
+        {
+            string directory = pathModel;
+            while(directory[directory.size()-1] != '\\' && directory[directory.size() - 1] != '/') {
+                directory.pop_back();
+            }
+            aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
+
+                cout << directory + loadTexture(material,
                     aiTextureType_DIFFUSE, "texture_diffuse") << endl;
 
-                return Mesh(verts, indices, directory+loadTexture(material,
+                return Mesh(verts, indices, directory + loadTexture(material,
                     aiTextureType_DIFFUSE, "texture_diffuse"), "");
-            }
+            
         }
 
-        return Mesh(verts, indices, texture, "");
+        return Mesh(verts, indices);
     }
 
 

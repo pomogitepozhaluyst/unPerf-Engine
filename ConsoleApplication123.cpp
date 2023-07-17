@@ -1,7 +1,11 @@
 ﻿#include <iostream>
 #include<../json/json.h>
 
-static bool isGo = true;
+constexpr int WIDTH = 1280;
+constexpr int HEIGHT = 720;
+
+int countLight = 0;
+
 //glew
 //#define GLEW STATIC
 #include <GL/glew.h>
@@ -32,26 +36,49 @@ static bool isGo = true;
 #include <../glm/glm/gtc/type_ptr.hpp>
 using namespace std;
 #include <../oGLReq/klevchMath.h>
-#include <../light/light.h>
 #include <../vertex/vertex.h>
 
 #include <../Shader/vbo.h>
 #include <../Shader/ebo.h>
 #include <../Shader/vao.h>
-
 #include <../Shader/shader.h>
-#include <../oGLReq/cumera.h>
+
+
+
+
+
+
+
 #include <../textures/textures.h>
+#include <../Component/Component.h>
+
+#include <../Component/Transform.h>
+#include <../oGLReq/cumera.h>
+map<int, Camera*> camers;
+int mainCamera = 0;
+int idCamers = 0;
+int idCurObject = 0;
+#include <../Component/Camera.h>
+
+#include <../Component/Input.h>
 #include <../mesh/mesh.h>
 #include <../object/object.h>
+#include <../Component/Mesh.h>
+
+#include <../light/light.h>
+#include <../Component/Light.h>
+
+
+
+
+#include <../object/object_manager.h>
 
 
 
 #include <../imguiEasyLibs/imguiWindow.h>
 
 using namespace std;
-constexpr int WIDTH = 1280;
-constexpr int HEIGHT = 720;
+
 
 int main() {
 	sf::ContextSettings settings;
@@ -61,7 +88,7 @@ int main() {
 	settings.minorVersion = 6;
 	
 
-	sf::RenderWindow window(sf::VideoMode(WIDTH, HEIGHT, 32), "Window", sf::Style::Titlebar | sf::Style::Close, settings);
+	sf::RenderWindow window(sf::VideoMode(WIDTH, HEIGHT, 32), "UnPerf Engine", sf::Style::Titlebar | sf::Style::Close, settings);
 	window.setFramerateLimit(60);
 	window.setVerticalSyncEnabled(true);
 	window.setActive();
@@ -73,13 +100,10 @@ int main() {
 		return -1;
 	}
 
-	//bool isGo = true;
 
 	sf::Clock clock;
 	float speed = 0.1f;
-	bool cursor = false;
 
-	Camera camera = Camera(WIDTH, HEIGHT, Vec3(0.0f, 0.0f, -1.0f));
 	
 
 	ImguiWindow img = ImguiWindow();
@@ -90,43 +114,60 @@ int main() {
 
 
 	glShadeModel(GL_SMOOTH);
-	ObjectManager manager = ObjectManager(vector<Camera>(1, camera), window.getSize());
-	manager.light.insert(pair<int, Light*>(123, &camera.light));
+	ObjectManager manager = ObjectManager(window.getSize());
 
+	manager.addObject("default camera");
+	manager.object[0]->component.insert(std::pair<int, Component*>{1, new CameraComponent(&manager.object[0]->transform, 0)});
+	manager.object[0]->component.insert(std::pair<int, Component*>{0, new InputComponent(&window,  &manager.object[0]->transform)});
+	camers.insert(std::pair<int, Camera*>{idCamers, new Camera(WIDTH, HEIGHT, Vec3(0.0f, 0.0f, -1.0f), &manager.object[0]->transform)});
+	manager.globalId++;
+
+	idCamers++;
+
+	float curTime;
+	bool isGo = true;
 
 	while (isGo) {
+		clock.restart();
+		sf::Event windowEvent;
+
+
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f); //отчистка экрана
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		sf::Event windowEvent;
 		while (window.pollEvent(windowEvent)) { // обработка ивентов
 
 			ImGui::SFML::ProcessEvent(windowEvent);
-			manager.camers[manager.mainCamera].move(&window, windowEvent, &cursor);
+			;
+			if (manager.object[idCurObject]->component.find(0) != manager.object[idCurObject]->component.end()) {
+				manager.object[idCurObject]->component[0]->update(manager.shaders, windowEvent);
+			}
+		}
+
+		switch (windowEvent.type)
+		{
+		case sf::Event::Closed:
+			isGo = false;
+			break;
+
+		default:
+			break;
 		}
 
 		img.update(window, &clock);
-		if (cursor) {
-			ImGui::SetMouseCursor(ImGuiMouseCursor_None);
 
-		}
 
 		glEnable(GL_DEPTH_TEST);
-		glEnable(GL_BLEND);
 
-		//glBlendEquation(GL_MAX);
-		glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE);
-		//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		//glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ZERO);
-		//glBlendFuncSeparate(GL_ONE);
-		img.basicWindow(&manager,&window, &clock);
 
-		manager.update();
+		img.basicWindow(&manager, &window, &clock, &windowEvent, &idCurObject);
+
+		manager.update(windowEvent);
 
 
 
 
-		
+
 
 
 		img.render(window);
@@ -138,64 +179,6 @@ int main() {
 	manager.Delete();
 	window.close();
 	img.shotDown();
-	//shoutdown
 
 	return 0;
 }
-
-//int main() {
-//	string vCode = get_file_contents("C:/openGL/ConsoleApplication123/Resources/Shader/default.vert");
-//	const char* vSourse = vCode.c_str();
-//	cout << vSourse;
-//}
-//
-//int main() {
-//	glm::vec3 front;
-//	glm::vec3 right;
-//	front.x = cos(50 * rad) * cos(70 * rad);
-//	front.y = sin(70 * rad);
-//	front.z = sin(50 * rad) * cos(70 * rad);
-//	front = glm::normalize(front);
-//	right = glm::normalize(glm::cross(front, glm::vec3(0, 1, 0)));
-//	glm::vec3 up = glm::normalize(glm::cross(right, front));
-//
-//	glm::mat4 view = glm::mat4(glm::vec4(1,2,1, 1), glm::vec4(1, 1, 1, 1), glm::vec4(1, 1, 1, 1), glm::vec4(1, 1, 1, 1));
-//	glm::mat4 view2 = glm::mat4(glm::vec4(7, 2, 2, 2), glm::vec4(3, 2, 2, 2), glm::vec4(2, 2, 1, 2), glm::vec4(2, 2, 2, 2));
-//	view *= view2;
-//	//cout << v1.x<<' ' << v1.y << ' ' << v1.z <<  '\n';
-//	for (int i = 0; i < 4; i++) {
-//		for (int j = 0; j < 4; j++)
-//			cout << view[i][j]<< ' ';
-//		cout << '\n';
-//	}
-//
-//	cout << '\n';
-//
-//	Vec3 front1;
-//	Vec3 right1;
-//	front1.x = cos(50 * rad) * cos(70 * rad);
-//	front1.y = sin(70 * rad);
-//	front1.z = sin(50 * rad) * cos(70 * rad);
-//	front1 = front1.Normalize();
-//	right1 = CrossProduct(front1, Vec3(0, 1, 0)).Normalize();
-//	Vec3 up1 = CrossProduct(right1, front1).Normalize();
-//
-//	Mat4 view1 = Mat4(1);
-//	view1.matrix[0][1] = 2;
-//	Mat4 view3 = Mat4(2);
-//	view3.matrix[1][0] = 3;
-//	view3.matrix[2][2] = 1;
-//	view3.matrix[0][0] = 7;
-//
-//	
-//
-//
-//
-//
-//	view1 = view1*view3;
-//	for (int i = 0; i < 4; i++) {
-//		for (int j = 0; j < 4; j++)
-//			cout << view1.matrix[i][j] << ' ';
-//		cout << '\n';
-//	}
-//}

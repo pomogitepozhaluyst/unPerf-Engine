@@ -140,6 +140,10 @@ public:
     }
   }
 
+  Vec3 operator*(Vec3 other) {
+      return Vec3(x * other.x, y * other.y, z * other.z);
+  }
+
   Vec3 operator*(float other) const {
     return Vec3(x * other, y * other, z * other);
   }
@@ -502,14 +506,6 @@ public:
       for (int j = 0; j < 3; j++)
         matrix[i][j] = a;
   }
-
-  //Mat3(Mat4 m) {
-  //    for (int i = 0; i < 3; i++) {
-  //        for (int j = 0; j < 3; j++) {
-  //            matrix[i][j] = m.matrix[i][j];
-  //        }
-  //    }
-  //}
 
   Mat3 operator+(Mat3 other) {
     Mat3 result = Mat3();
@@ -1035,37 +1031,6 @@ Quaternion Perspective(Quaternion q, float fov, float width, float height,
                     q.v.y);
 }
 
-class PerspectiveClass {
-public:
-  float k1;
-  float k2;
-  float k3;
-  float k4;
-
-  PerspectiveClass(float fov, float width, float height, float near,
-                   float far) {
-    float tg = tan(fov * 3.14 / 180.0f);
-    k1 = 1.0f/((width / height )* tg);
-    k2 = 1.0f/ tg;
-    float tmp = near - far;
-    k3 = (-far - near) / tmp;
-    k4 = (2.0f * far * near) / tmp;
-  }
-
-  Vec3 Perspective(Vec3 v) { return Vec3(v.x * k1, v.y * k2, v.z * k3 + k4); }
-
-  Quaternion Perspective(Quaternion q) {
-    return Quaternion(q.a * k1, q.v.x * k2, q.v.y * k3 + q.v.z * k4, q.v.y);
-  }
-
-  Mat4 Perspective() {
-      Mat4 result = Mat4(k1, k2, k3 , 0.0f);
-      result.matrix[3][2] = k4;
-      result.matrix[2][3] = 1.0f;
-      return result;
-  }
-};
-
 Mat4 Perspective(float fov, float ratio, float near,
     float far) {
     float tg = tan(fov / 2);
@@ -1102,55 +1067,55 @@ Vec3 QRotationZ(Vec3 v, float angle) {
 
 Mat4 MRotationX(float angle) {
   Mat4 rMatrix = Mat4().E();
-  rMatrix.matrix[1][1] = cos(angle * 3.14 / 180);
-  rMatrix.matrix[2][2] = cos(angle * 3.14 / 180);
-  rMatrix.matrix[2][1] = sin(angle * 3.14 / 180);
-  rMatrix.matrix[1][2] = -sin(angle * 3.14 / 180);
+  rMatrix.matrix[1][1] = cos(angle * pi / 180);
+  rMatrix.matrix[2][2] = cos(angle * pi / 180);
+  rMatrix.matrix[2][1] = sin(angle * pi / 180);
+  rMatrix.matrix[1][2] = -sin(angle * pi / 180);
   return rMatrix;
 }
 
 Mat4 MRotationY(float angle) {
     Mat4 rMatrix = Mat4().E();
-    rMatrix.matrix[0][0] = cos(angle * 3.14 / 180);
-    rMatrix.matrix[2][2] = cos(angle * 3.14 / 180);
-    rMatrix.matrix[0][2] = sin(angle * 3.14 / 180);
-    rMatrix.matrix[2][0] = -sin(angle * 3.14 / 180);
+    rMatrix.matrix[0][0] = cos(angle * pi / 180);
+    rMatrix.matrix[2][2] = cos(angle * pi / 180);
+    rMatrix.matrix[0][2] = sin(angle * pi / 180);
+    rMatrix.matrix[2][0] = -sin(angle * pi / 180);
     return rMatrix;
 }
 
 Mat4 MRotationZ(float angle) {
     Mat4 rMatrix = Mat4().E();
-    rMatrix.matrix[0][0] = cos(angle * 3.14 / 180);
-    rMatrix.matrix[0][1] = -sin(angle * 3.14 / 180);
-    rMatrix.matrix[1][0] = sin(angle * 3.14 / 180);
-    rMatrix.matrix[1][1] = cos(angle * 3.14 / 180);
+    rMatrix.matrix[0][0] = cos(angle * pi / 180);
+    rMatrix.matrix[0][1] = -sin(angle * pi / 180);
+    rMatrix.matrix[1][0] = sin(angle * pi / 180);
+    rMatrix.matrix[1][1] = cos(angle * pi / 180);
     return rMatrix;
 }
 
 Mat3 MRotationX3(float angle) {
     Mat3 rMatrix = Mat3().E();
-    rMatrix.matrix[1][1] = cos(angle * 3.14 / 180);
-    rMatrix.matrix[2][2] = cos(angle * 3.14 / 180);
-    rMatrix.matrix[2][1] = sin(angle * 3.14 / 180);
-    rMatrix.matrix[1][2] = -sin(angle * 3.14 / 180);
+    rMatrix.matrix[1][1] = cos(angle * pi / 180);
+    rMatrix.matrix[2][2] = cos(angle * pi / 180);
+    rMatrix.matrix[2][1] = sin(angle * pi / 180);
+    rMatrix.matrix[1][2] = -sin(angle * pi / 180);
     return rMatrix;
 }
 
 Mat3 MRotationY3(float angle) {
     Mat3 rMatrix = Mat3().E();
-    rMatrix.matrix[0][0] = cos(angle * 3.14 / 180);
-    rMatrix.matrix[2][2] = cos(angle * 3.14 / 180);
-    rMatrix.matrix[0][2] = sin(angle * 3.14 / 180);
-    rMatrix.matrix[2][0] = -sin(angle * 3.14 / 180);
+    rMatrix.matrix[0][0] = cos(angle * pi / 180);
+    rMatrix.matrix[2][2] = cos(angle * pi / 180);
+    rMatrix.matrix[0][2] = sin(angle * pi / 180);
+    rMatrix.matrix[2][0] = -sin(angle * pi / 180);
     return rMatrix;
 }
 
 Mat3 MRotationZ3(float angle) {
     Mat3 rMatrix = Mat3().E();
-    rMatrix.matrix[0][0] = cos(angle * 3.14 / 180);
-    rMatrix.matrix[0][1] = -sin(angle * 3.14 / 180);
-    rMatrix.matrix[1][0] = sin(angle * 3.14 / 180);
-    rMatrix.matrix[1][1] = cos(angle * 3.14 / 180);
+    rMatrix.matrix[0][0] = cos(angle * pi / 180);
+    rMatrix.matrix[0][1] = -sin(angle * pi / 180);
+    rMatrix.matrix[1][0] = sin(angle * pi / 180);
+    rMatrix.matrix[1][1] = cos(angle * pi / 180);
     return rMatrix;
 }
 
@@ -1273,7 +1238,6 @@ Mat3 LookAt3x3(Vec3 from, Vec3 to, Vec3 worldUp) {
 }
 
 float angle(Vec3 v1, Vec3 v2) {
-   // glm::angle(glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(1.0f, 2.0f, 1.0f));
     
     return 180.0f*acos(DotProduct(v1, v2) / (v1.Length()*v2.Length()))/pi;
 }
@@ -1286,27 +1250,3 @@ Mat4 matTranslate(Vec3 t) {
     return result;
 }
 
-Mat4 createMat4(float const* const ptr) {
-   Mat4 result;
-    memcpy(&(result.matrix[0][0]), ptr, sizeof(Mat4));
-    return result;
-}
-
-Mat4 ERotate(float a, float b, float g) {
-    Mat4 result = Mat4().E();
-    
-    result.matrix[0][0] = cos(a)*cos(b);
-    result.matrix[0][1] = cos(a)*sin(b)*sin(g)-sin(a)*cos(g);
-    result.matrix[0][2] = cos(a)*sin(b)*cos(g)+sin(a)*sin(g);
-
-    result.matrix[1][0] = sin(a)*cos(b);
-    result.matrix[1][1] = sin(a) * sin(b) * sin(g) + cos(a) * cos(g);
-    result.matrix[1][2] = sin(a) * sin(b) * cos(g) - cos(a)*sin(g);
-
-    result.matrix[2][0] = -sin(b);
-    result.matrix[2][1] = cos(b) * sin(g)  ;
-    result.matrix[2][2] = cos(b) * cos(g);
-
-    return result;
-
-}
